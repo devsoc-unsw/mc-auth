@@ -1,0 +1,240 @@
+@import "tailwindcss";
+
+@font-face {
+  font-family: "TT Commons Pro Variable";
+  src: url("/font/TT_Commons_Pro_Variable.woff2") format("woff2-variations");
+  font-weight: 100 900;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "MinecraftSGA";
+  src: url("/font/minecraft-enchanting-table-sga.ttf") format("truetype");
+  font-weight: normal;
+  font-display: block;
+}
+
+@theme {
+  --color-base: #181818;
+  --color-surface: #3c3c3c;
+  --color-border: #1a1a1a;
+  --color-accent: #d9807e;
+  --color-grass: #5a9936;
+  --color-grass-bright: #7cc335;
+  --color-fg: #ffffff;
+  --color-muted: #ababab;
+  --font-sans: "TT Commons Pro Variable", system-ui, sans-serif;
+}
+
+/* Press Start 2P — always rendered with MC-authentic drop shadow */
+.font-pixel {
+  font-family: var(--next-font-pixel), "Courier New", monospace;
+  text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.8);
+}
+
+/* Dark void background with a visible 16px pixel grid */
+body {
+  background-color: #181818;
+  background-image: linear-gradient(rgba(255, 255, 255, 0.045) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.045) 1px, transparent 1px);
+  background-size: 16px 16px;
+}
+
+/* ─── Authentic Minecraft UI components ───────────────────
+   All borders follow the MC bevel convention:
+   - Raised surface: bright top/left, dark bottom/right
+   - Inset surface:  dark top/left, bright bottom/right
+──────────────────────────────────────────────────────── */
+
+/* Inventory slot — inset into the panel surface */
+.mc-slot {
+  background: #111;
+  /* dark top/left = sunken; bright bottom/right = rim highlight */
+  box-shadow:
+    inset 2px 2px 0 0 #1a1a1a,
+    inset -2px -2px 0 0 #7a7a7a,
+    0 0 0 2px #000;
+}
+
+/* Panel / chest GUI background — raised gray stone */
+.mc-panel {
+  background: #3c3c3c;
+  /* bright top/left = raised; dark bottom/right = recessed edge */
+  box-shadow:
+    inset 2px 2px 0 0 #5e5e5e,
+    inset -2px -2px 0 0 #1a1a1a,
+    0 0 0 3px #000,
+    6px 6px 0 0 rgba(0, 0, 0, 0.75);
+}
+
+/* Base button — raised MC button in dark gray */
+.mc-btn {
+  background: #4a4a4a;
+  box-shadow:
+    inset 2px 2px 0 0 #7c7c7c,
+    inset -2px -2px 0 0 #242424,
+    0 0 0 2px #000;
+  transition:
+    filter 60ms linear,
+    box-shadow 60ms linear;
+  cursor: pointer;
+  user-select: none;
+}
+
+.mc-btn:hover:not(:disabled):not([aria-disabled="true"]) {
+  filter: brightness(1.25);
+}
+
+/* Press-in — swap bevel directions to simulate key press */
+.mc-btn:active:not(:disabled):not([aria-disabled="true"]) {
+  box-shadow:
+    inset 2px 2px 0 0 #242424,
+    inset -2px -2px 0 0 #7c7c7c,
+    0 0 0 2px #000;
+  filter: brightness(0.85);
+}
+
+.mc-btn:disabled,
+.mc-btn[aria-disabled="true"] {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* Accent variant — DevSoc rose primary action */
+.mc-btn-accent {
+  background: #c86e6c;
+  box-shadow:
+    inset 2px 2px 0 0 #e8a09e,
+    inset -2px -2px 0 0 #6b2a28,
+    0 0 0 2px #000;
+}
+
+/* Danger variant — remove / destructive */
+.mc-btn-danger {
+  background: #5c1e1e;
+  box-shadow:
+    inset 2px 2px 0 0 #8c3a3a,
+    inset -2px -2px 0 0 #1a0505,
+    0 0 0 2px #000;
+}
+
+/* MC text field — black inset box */
+.mc-input {
+  background: #000;
+  border: 2px solid #5a5a5a;
+  color: #e0e0e0;
+  outline: none;
+  caret-color: #ffffff;
+  font-family: var(--next-font-pixel), "Courier New", monospace;
+  text-shadow: none; /* no shadow inside fields */
+  transition: border-color 80ms linear;
+}
+
+.mc-input:focus {
+  border-color: #d9807e;
+}
+
+.mc-input::placeholder {
+  color: #4a4a4a;
+}
+
+/* ─── Minecraft-authentic animations ─────────────────────── */
+
+/* Rainbow cycling — matches MC colour-code cycling palette (§4 §c §6 §e §a §2 §b §3 §9 §1 §d §5)
+   text-shadow mirrors the darker "drop" variant MC uses for each hue */
+@keyframes mc-rainbow {
+  0%,
+  100% {
+    color: #ff5555;
+    text-shadow: 2px 2px 0 #aa0000;
+  }
+  14.3% {
+    color: #ffaa00;
+    text-shadow: 2px 2px 0 #7f5500;
+  }
+  28.6% {
+    color: #ffff55;
+    text-shadow: 2px 2px 0 #7f7f00;
+  }
+  42.9% {
+    color: #55ff55;
+    text-shadow: 2px 2px 0 #007f00;
+  }
+  57.1% {
+    color: #55ffff;
+    text-shadow: 2px 2px 0 #007f7f;
+  }
+  71.4% {
+    color: #5555ff;
+    text-shadow: 2px 2px 0 #00007f;
+  }
+  85.7% {
+    color: #ff55ff;
+    text-shadow: 2px 2px 0 #7f007f;
+  }
+}
+
+/* Enchanting-table glow variant — used on floating SGA runes (glow not drop-shadow) */
+@keyframes enchant-rainbow {
+  0%,
+  100% {
+    color: #ff5555;
+    text-shadow:
+      0 0 6px #ff5555,
+      0 0 14px rgba(255, 85, 85, 0.3);
+  }
+  14.3% {
+    color: #ffaa00;
+    text-shadow:
+      0 0 6px #ffaa00,
+      0 0 14px rgba(255, 170, 0, 0.3);
+  }
+  28.6% {
+    color: #ffff55;
+    text-shadow:
+      0 0 6px #ffff55,
+      0 0 14px rgba(255, 255, 85, 0.3);
+  }
+  42.9% {
+    color: #55ff55;
+    text-shadow:
+      0 0 6px #55ff55,
+      0 0 14px rgba(85, 255, 85, 0.3);
+  }
+  57.1% {
+    color: #55ffff;
+    text-shadow:
+      0 0 6px #55ffff,
+      0 0 14px rgba(85, 255, 255, 0.3);
+  }
+  71.4% {
+    color: #5555ff;
+    text-shadow:
+      0 0 6px #5555ff,
+      0 0 14px rgba(85, 85, 255, 0.3);
+  }
+  85.7% {
+    color: #ff55ff;
+    text-shadow:
+      0 0 6px #ff55ff,
+      0 0 14px rgba(255, 85, 255, 0.3);
+  }
+}
+
+/* Enchanting table rune — rises from bottom, fades in/out over the journey */
+@keyframes enchant-rise {
+  0% {
+    transform: translateY(0) rotate(0deg);
+    opacity: 0;
+  }
+  8% {
+    opacity: 0.6;
+  }
+  92% {
+    opacity: 0.6;
+  }
+  100% {
+    transform: translateY(-100vh) rotate(12deg);
+    opacity: 0;
+  }
+}
