@@ -8,7 +8,7 @@ interface Props {
   linkedUuid: string | null
 }
 
-type LookupState = "idle" | "loading" | "found" | "notfound"
+type LookupState = "idle" | "loading" | "found" | "notfound" | "error"
 
 interface LinkResponse {
   success?: boolean
@@ -24,11 +24,15 @@ export function MinecraftLinkCard({ linkedUsername, linkedUuid }: Props) {
   const [currentUuid, setCurrentUuid] = useState(linkedUuid ?? "")
   const [username, setUsername] = useState("")
   const [lookupState, setLookupState] = useState<LookupState>("idle")
+  const [lookupErrorMsg, setLookupErrorMsg] = useState("LOOKUP FAILED")
   const [lookedUpUuid, setLookedUpUuid] = useState<string | null>(null)
   // Track WHICH head finished loading, not just that one did. A head that
   // finishes after the username changed resolves to a now-stale UUID and is
   // ignored, instead of falsely marking the new username as "found".
   const [loadedUuid, setLoadedUuid] = useState<string | null>(null)
+  // ...and WHICH head failed to load. A dead head CDN must not trap the user on
+  // a valid player, so a failed load still counts as "settled" for the button.
+  const [failedUuid, setFailedUuid] = useState<string | null>(null)
   const [linking, setLinking] = useState(false)
   const [unlinking, setUnlinking] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -37,16 +41,19 @@ export function MinecraftLinkCard({ linkedUsername, linkedUuid }: Props) {
 
   const avatarUrl = lookedUpUuid ? `https://api.mcheads.org/head/${lookedUpUuid}/128` : null
 
-  // The head counts as loaded only when the head that finished matches the
-  // current lookup — a head loaded for a previous username is simply ignored.
-  const headLoaded = lookedUpUuid !== null && loadedUuid === lookedUpUuid
+  // The head for the current lookup has *settled* once it either loaded or
+  // failed — both match on the current UUID, so a result for a previous
+  // username is ignored. Failure still settles so a dead CDN can't block ADD.
+  const headSettled =
+    lookedUpUuid !== null && (loadedUuid === lookedUpUuid || failedUuid === lookedUpUuid)
 
-  // Only show the head for a settled "found" result — during a fresh lookup the
-  // previous (still-loaded) head must hide so it isn't overlaid by the spinner.
-  const showHead = lookupState === "found" && headLoaded
+  // Only show the head when it actually loaded (not on failure, so we never
+  // render a broken image) and the result is a settled "found".
+  const showHead = lookupState === "found" && loadedUuid === lookedUpUuid
 
-  // Button is only enabled once: player found AND head image has loaded
-  const canAdd = lookupState === "found" && headLoaded && !linking
+  // Button is enabled once the player is found AND the head has settled
+  // (loaded or failed) — a failed head shows no preview but still lets you add.
+  const canAdd = lookupState === "found" && headSettled && !linking
 
   useEffect(() => {
     if (linked || username.length < 3) {
@@ -60,27 +67,43 @@ export function MinecraftLinkCard({ linkedUsername, linkedUuid }: Props) {
     const lookupKey = username.toLowerCase()
     if (resolvedRef.current === lookupKey) return
 
+    // A newer keystroke supersedes this lookup; the cleanup flips `cancelled` so
+    // a slow in-flight request can't apply a stale result to the new username.
+    let cancelled = false
     const timer = setTimeout(async () => {
       setLookupState("loading")
       try {
         const res = await fetch(`/api/mojang?username=${encodeURIComponent(username)}`)
+        if (cancelled) return
         if (res.ok) {
           const data: { id: string; name: string } = await res.json()
+          if (cancelled) return
           setLookedUpUuid(data.id)
           setLookupState("found")
-        } else {
+        } else if (res.status === 404) {
           setLookedUpUuid(null)
           setLookupState("notfound")
+        } else {
+          // 429 / 502 etc. — the name might well exist, so don't claim "not
+          // found"; surface a distinct error instead.
+          setLookedUpUuid(null)
+          setLookupErrorMsg(res.status === 429 ? "TOO MANY LOOKUPS — WAIT A MINUTE" : "LOOKUP FAILED")
+          setLookupState("error")
         }
       } catch {
+        if (cancelled) return
         setLookedUpUuid(null)
-        setLookupState("notfound")
+        setLookupErrorMsg("LOOKUP FAILED")
+        setLookupState("error")
       } finally {
-        resolvedRef.current = lookupKey
+        if (!cancelled) resolvedRef.current = lookupKey
       }
     }, 600)
 
-    return () => clearTimeout(timer)
+    return () => {
+      cancelled = true
+      clearTimeout(timer)
+    }
   }, [username, linked])
 
   async function handleLink() {
@@ -249,11 +272,13 @@ export function MinecraftLinkCard({ linkedUsername, linkedUuid }: Props) {
               ].join(" ")}
               unoptimized
               onLoad={() => setLoadedUuid(lookedUpUuid)}
+              // Head CDN failed — settle so the player can still be added.
+              onError={() => setFailedUuid(lookedUpUuid)}
             />
           )}
 
           {/* In-theme loading state */}
-          {lookupState === "loading" || (avatarUrl && !headLoaded) ? (
+          {lookupState === "loading" || (avatarUrl && !headSettled) ? (
             <LoadingBlocks />
           ) : !avatarUrl ? (
             <GrassBlock />
@@ -294,7 +319,7 @@ export function MinecraftLinkCard({ linkedUsername, linkedUuid }: Props) {
                 LOOKING UP...
               </span>
             )}
-            {lookupState === "found" && !headLoaded && (
+            {lookupState === "found" && !headSettled && (
               <span
                 className="font-pixel text-muted"
                 style={{ fontSize: "12px", letterSpacing: "0.08em" }}
@@ -317,7 +342,22 @@ export function MinecraftLinkCard({ linkedUsername, linkedUuid }: Props) {
                 NOT FOUND
               </span>
             )}
-            {lookupState === "found" && headLoaded && (
+            {lookupState === "error" && username.length >= 3 && (
+              <span
+                className="font-pixel text-red-400"
+                style={{
+                  fontSize: "12px",
+                  letterSpacing: "0.08em",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "7px",
+                }}
+              >
+                <PixelX size={13} />
+                {lookupErrorMsg}
+              </span>
+            )}
+            {lookupState === "found" && headSettled && (
               <span
                 className="font-pixel text-grass-bright"
                 style={{

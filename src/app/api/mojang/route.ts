@@ -7,8 +7,21 @@ const rateLimiter = new Map<string, { count: number; resetAt: number }>()
 const RATE_LIMIT = 20
 const RATE_WINDOW_MS = 60_000
 
+let lastSweepAt = 0
+
 function isRateLimited(userId: string): boolean {
   const now = Date.now()
+
+  // Opportunistically evict expired entries (at most once per window) so the
+  // map stays bounded by the number of *currently active* users instead of
+  // growing forever with every distinct user that has ever looked something up.
+  if (now - lastSweepAt > RATE_WINDOW_MS) {
+    for (const [key, value] of rateLimiter) {
+      if (now >= value.resetAt) rateLimiter.delete(key)
+    }
+    lastSweepAt = now
+  }
+
   const entry = rateLimiter.get(userId)
 
   if (!entry || now >= entry.resetAt) {
