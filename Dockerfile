@@ -11,7 +11,7 @@ WORKDIR /app
 COPY package.json pnpm-lock.yaml ./
 
 FROM base AS deps
-RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install
+RUN --mount=type=cache,id=npm,target=/root/.npm npm install
 
 FROM deps AS build
 COPY . .
@@ -44,4 +44,4 @@ USER node
 
 EXPOSE 3000
 
-CMD ["sh", "-c", "pnpm prisma db push && pnpm start"]
+CMD ["sh", "-c", "node_modules/.bin/prisma db push && npm start"]
